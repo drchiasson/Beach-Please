@@ -5,14 +5,15 @@ from langchain_core.tools import tool
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 
 
 
 
 
-
-beach_agent_prompt = "You are a beach day advisor"
+beach_agent_prompt = "You are a beach day planner agent. We need to find out which days are good to go to the beach. Call the tools needed to determine the best day to go to the beach and then choose which days are best to go to the beach"
+beach_human_message = HumanMessage(content="Marshalls Beach")
 beach_agent_data = {}
 
 
@@ -29,8 +30,7 @@ class AgentState(TypedDict):
 tools = []
 
 #TODO pick model and add requisite dependencies
-model = "TBD"
-
+model = ChatGoogleGenerativeAI(model="gemini-3.5-flash")
 
 
 #Nodes - List of nodes the AI will utilize
@@ -38,10 +38,13 @@ model = "TBD"
 def beach_agent(state: AgentState) -> AgentState:
     """Agent invoker"""
 
-    print("In camping agent")
+    print("In beach agent")
 
     system_prompt = SystemMessage(content=beach_agent_prompt + str(beach_agent_data))
-    all_messages = [system_prompt] + list(state["messages"])
+    print("system prompt built")
+    all_messages = [system_prompt] + [beach_human_message] + list(state["messages"])
+    print("add message to system prompt")
+    print(all_messages)
     response = model.invoke(all_messages) 
     print(f"AI Reponse: {response}")
     return {"messages": list(state["messages"] + [response])}
