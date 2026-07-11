@@ -7,7 +7,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
 from noaa_weather import get_forecasts
-
+from telegram_message_sender import send_bot_message
 
 
 
@@ -85,7 +85,7 @@ def telegram_message(message) -> str:
             message: The message you want to send to the telegram group.
     
     """
-
+    send_bot_message(message)
 
 
 
