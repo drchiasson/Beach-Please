@@ -87,6 +87,8 @@ def telegram_message(message) -> str:
     """
     send_bot_message(message)
 
+    return "message sent"
+
 
 
 tools = [weather_data, telegram_message]

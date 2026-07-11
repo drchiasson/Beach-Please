@@ -6,15 +6,6 @@ import requests
 POINTS_URL = "https://api.weather.gov/points/37.8017,-122.48"
 HEADERS = {"User-Agent": "BeachPlease-Weather"}
 
-
-@dataclass
-class Forecast:
-    temperature: float
-    windSpeed: float
-    windDirection: str
-    probabilityOfPrecipitation: int
-
-
 def parse_wind_speed(wind_speed_str):
     speeds = [float(n) for n in re.findall(r"\d+(?:\.\d+)?", wind_speed_str)]
     return sum(speeds) / len(speeds)
