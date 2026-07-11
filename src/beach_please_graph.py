@@ -6,7 +6,7 @@ from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
-
+from noaa_weather import get_forecasts
 
 
 
@@ -27,7 +27,7 @@ class AgentState(TypedDict):
 
 #Initialize the agent
 
-tools = []
+
 
 #TODO pick model and add requisite dependencies
 model = ChatGoogleGenerativeAI(model="gemini-3.5-flash")
@@ -41,12 +41,10 @@ def beach_agent(state: AgentState) -> AgentState:
     print("In beach agent")
 
     system_prompt = SystemMessage(content=beach_agent_prompt + str(beach_agent_data))
-    print("system prompt built")
+    
     all_messages = [system_prompt] + [beach_human_message] + list(state["messages"])
-    print("add message to system prompt")
-    print(all_messages)
+    
     response = model.invoke(all_messages) 
-    print(f"AI Reponse: {response}")
     return {"messages": list(state["messages"] + [response])}
 
 def should_continue(state: AgentState) -> AgentState:
@@ -69,15 +67,29 @@ def should_continue(state: AgentState) -> AgentState:
 
 
 #Tools - List of tools the AI will utilize
+def weather_data()->Dict:
+    """
+        Gets the weather forcast for the beach in question for the current day.
+
+        Args:
+            
+    """
+    return get_forecasts()
+
+
+def telegram_message(message) -> str:
+    """
+        Sends a telegram message to the telegram channel
+
+        Args:
+            message: The message you want to send to the telegram group.
+    
+    """
 
 
 
 
-
-
-
-
-
+tools = [weather_data, telegram_message]
 
 #Build the graph and the edges
 graph = StateGraph(AgentState)
