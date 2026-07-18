@@ -8,16 +8,11 @@ from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
 from noaa_weather import get_forecasts
 from telegram_message_sender import send_bot_message
-
-
-
+from tide_predictions_range import get_tide_predictions
 
 beach_agent_prompt = "You are a beach day planner agent. We need to find out which days are good to go to the beach. Call the tools needed to determine the best day to go to the beach and then choose which days are best to go to the beach"
 beach_human_message = HumanMessage(content="Marshalls Beach")
 beach_agent_data = {}
-
-
-
 
 
 class AgentState(TypedDict):
@@ -26,8 +21,6 @@ class AgentState(TypedDict):
 
 
 #Initialize the agent
-
-
 
 #TODO pick model and add requisite dependencies
 model = ChatGoogleGenerativeAI(model="gemini-3.5-flash")
@@ -67,7 +60,7 @@ def should_continue(state: AgentState) -> AgentState:
 
 
 #Tools - List of tools the AI will utilize
-def weather_data()->Dict:
+def forecast_data()->Dict:
     """
         Gets the weather forcast for the beach in question for the current day.
 
@@ -76,6 +69,15 @@ def weather_data()->Dict:
     """
     return get_forecasts()
 
+def tidal_data(start_date, end_date) -> Dict:
+    """ 
+        Gets the tidal data for the beach in question for a date range.
+
+        Args:
+            start_date: The beginning of the date range you want to get tidal data from.
+            end_date: The end of the date range you want to get tidal data from.
+    """
+    get_tide_predictions(start_date, end_date)
 
 def telegram_message(message) -> str:
     """
@@ -91,7 +93,7 @@ def telegram_message(message) -> str:
 
 
 
-tools = [weather_data, telegram_message]
+tools = [forecast_data, telegram_message]
 
 #Build the graph and the edges
 graph = StateGraph(AgentState)
