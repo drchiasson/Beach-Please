@@ -12,8 +12,8 @@ def get_tide_predictions(start_date, end_date):
         "end_date": end_date,
         "station": STATION,
         "product": "predictions",
-        "datum": "STND",
-        "time_zone": "lst",
+        "datum": "MLLW",
+        "time_zone": "lst_ldt",
         "units": "english",
         "format": "json",
     }
