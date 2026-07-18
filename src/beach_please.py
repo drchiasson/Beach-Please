@@ -10,8 +10,10 @@ from noaa_weather import get_forecasts
 from telegram_message_sender import send_bot_message
 from tide_predictions_range import get_tide_predictions
 from beach_please_prompt import prompt_string
+from fog_agent_prompt import fog_prompt
 
 beach_agent_prompt = prompt_string
+fog_agent_prompt = fog_prompt
 beach_human_message = HumanMessage(content="Marshalls Beach")
 beach_agent_data = {}
 
@@ -62,8 +64,13 @@ def should_continue(state: AgentState) -> AgentState:
     last_message = messages[-1]
     print(last_message)
 
-    if isinstance(last_message.content, str) and last_message.content == "message sent":
-        return "end"
+    if isinstance(last_message.content, str):
+
+        if last_message.content == "fog_data_recieved":
+            return "fog_data_ready"
+
+        if last_message.content == "message sent":
+            return "end"
     
     return "continue"
 
@@ -105,10 +112,9 @@ def telegram_message(message) -> str:
     return "message sent"
 
 
-
 tools = [forecast_data, tidal_data, telegram_message]
-model = ChatGoogleGenerativeAI(model="gemini-3.5-flash").bind_tools(tools)
-fog_model = ChatGoogleGenerativeAI(model="gemini-3.5-flash")
+model = ChatGoogleGenerativeAI(model="gemini-3.1-flash-lite").bind_tools(tools)
+fog_model = ChatGoogleGenerativeAI(model="gemini-3.1-flash-lite")
 
 #Build the graph and the edges
 graph = StateGraph(AgentState)
@@ -118,7 +124,6 @@ graph.add_node("tools", ToolNode(tools))
 graph.add_node("fog_agent", fog_agent)
 
 graph.add_edge(START, "agent")
-graph.add_edge("agent", "fog_agent")
 graph.add_edge("agent", "tools")
 
 graph.add_conditional_edges(
@@ -126,6 +131,7 @@ graph.add_conditional_edges(
     should_continue,
     {
         "continue": "agent",
+        "fog_data_ready": "fog_agent",
         "end": END
     }
 )
