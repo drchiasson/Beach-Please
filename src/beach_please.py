@@ -9,8 +9,9 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from noaa_weather import get_forecasts
 from telegram_message_sender import send_bot_message
 from tide_predictions_range import get_tide_predictions
+from beach_please_prompt import prompt_string
 
-beach_agent_prompt = "You are a beach day planner agent. We need to find out which days are good to go to the beach. Call the tools needed to determine the best day to go to the beach and then choose which days are best to go to the beach"
+beach_agent_prompt = prompt_string
 beach_human_message = HumanMessage(content="Marshalls Beach")
 beach_agent_data = {}
 
@@ -23,7 +24,7 @@ class AgentState(TypedDict):
 #Initialize the agent
 
 #TODO pick model and add requisite dependencies
-model = ChatGoogleGenerativeAI(model="gemini-3.5-flash")
+
 
 
 #Nodes - List of nodes the AI will utilize
@@ -40,6 +41,14 @@ def beach_agent(state: AgentState) -> AgentState:
     response = model.invoke(all_messages) 
     return {"messages": list(state["messages"] + [response])}
 
+def fog_agent(state:AgentState) -> AgentState:
+    """Fog Agent Invoker"""
+    system_prompt = SystemMessage(content=fog_agent_prompt)
+    fog_human_message = HumanMessage(content = "<Fog Data goes here>")
+    all_messages = [system_prompt] + [fog_human_message]
+    response = fog_model.invoke(all_messages)
+    return {"messages": list(state["messages"] + [response])}
+
 def should_continue(state: AgentState) -> AgentState:
     """ Determine if we should continue or end the agent run"""
 
@@ -51,9 +60,9 @@ def should_continue(state: AgentState) -> AgentState:
         return "continue"
 
     last_message = messages[-1]
-    print("Last Message:" + last_message.content)
+    print(last_message)
 
-    if last_message.content == "message sent":
+    if isinstance(last_message.content, str) and last_message.content == "message sent":
         return "end"
     
     return "continue"
@@ -67,6 +76,7 @@ def forecast_data()->Dict:
         Args:
             
     """
+    print("In get forecast_data")
     return get_forecasts()
 
 def tidal_data(start_date, end_date) -> Dict:
@@ -77,7 +87,8 @@ def tidal_data(start_date, end_date) -> Dict:
             start_date: The beginning of the date range you want to get tidal data from.
             end_date: The end of the date range you want to get tidal data from.
     """
-    get_tide_predictions(start_date, end_date)
+    print("In get tidal_data")
+    return get_tide_predictions(start_date, end_date)
 
 def telegram_message(message) -> str:
     """
@@ -87,21 +98,27 @@ def telegram_message(message) -> str:
             message: The message you want to send to the telegram group.
     
     """
+    print("In get send telegram message")
+
     send_bot_message(message)
 
     return "message sent"
 
 
 
-tools = [forecast_data, telegram_message]
+tools = [forecast_data, tidal_data, telegram_message]
+model = ChatGoogleGenerativeAI(model="gemini-3.5-flash").bind_tools(tools)
+fog_model = ChatGoogleGenerativeAI(model="gemini-3.5-flash")
 
 #Build the graph and the edges
 graph = StateGraph(AgentState)
 
 graph.add_node("agent", beach_agent)
 graph.add_node("tools", ToolNode(tools))
+graph.add_node("fog_agent", fog_agent)
 
 graph.add_edge(START, "agent")
+graph.add_edge("agent", "fog_agent")
 graph.add_edge("agent", "tools")
 
 graph.add_conditional_edges(
