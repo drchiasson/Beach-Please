@@ -1,3 +1,4 @@
 *.env
 *.DS_Store
 satellite_image_bin/*.jpg
+__pycache__/
