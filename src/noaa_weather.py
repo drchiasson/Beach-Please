@@ -11,7 +11,7 @@ def parse_wind_speed(wind_speed_str):
     return sum(speeds) / len(speeds)
 
 
-def get_forecasts(points_url) -> dict:
+def get_forecasts(points_url=POINTS_URL) -> dict:
     points_resp = requests.get(points_url, headers=HEADERS)
     points_resp.raise_for_status()
     forecast_url = points_resp.json()["properties"]["forecast"]
