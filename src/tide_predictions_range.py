@@ -28,8 +28,31 @@ def parse_args():
     parser.add_argument("enddate", help="End date in YYYYMMDD format")
     return parser.parse_args()
 
+def get_high_low_tides(predictions):
+    """Find local high/low points in a tide prediction series.
+
+    predictions: list of {"t": "<datetime>", "v": "<height>"} dicts,
+    as returned by get_tide_predictions.
+    """
+    points = [(p["t"], float(p["v"])) for p in predictions]
+
+    highs = []
+    lows = []
+    for i in range(1, len(points) - 1):
+        t, v = points[i]
+        _, v_prev = points[i - 1]
+        _, v_next = points[i + 1]
+
+        if v > v_prev and v > v_next:
+            highs.append({"time": t, "height": v})
+        elif v < v_prev and v < v_next:
+            lows.append({"time": t, "height": v})
+
+    return {"high_tides": highs, "low_tides": lows}
+
 
 if __name__ == "__main__":
     args = parse_args()
     predictions = get_tide_predictions(args.startdate, args.enddate)
-    print(predictions)
+    lowHighTides = get_high_low_tides(predictions)
+    print(lowHighTides)
