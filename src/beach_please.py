@@ -62,7 +62,7 @@ def should_continue(state: AgentState) -> AgentState:
         return "continue"
 
     last_message = messages[-1]
-    print(last_message)
+    #print(last_message)
 
     if isinstance(last_message.content, str):
 

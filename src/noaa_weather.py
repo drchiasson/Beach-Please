@@ -20,7 +20,7 @@ def get_forecasts(points_url=POINTS_URL) -> dict:
     forecast_resp.raise_for_status()
     periods = forecast_resp.json()["properties"]["periods"]
 
-    return {"Forcast":[
+    forecast =  {"Forcast":[
         {
             "temperature": str(float(period["temperature"])),
             "windSpeed": str(parse_wind_speed(period["windSpeed"])),
@@ -29,6 +29,9 @@ def get_forecasts(points_url=POINTS_URL) -> dict:
         }
         for period in periods
     ]}
+
+    print(forecast)
+    return forecast
 
 
 if __name__ == "__main__":

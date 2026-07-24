@@ -19,7 +19,7 @@ def get_tide_predictions(start_date, end_date):
     }
     resp = requests.get(TIDES_URL, params=params)
     resp.raise_for_status()
-    return resp.json()["predictions"]
+    return get_high_low_tides(resp.json()["predictions"])
 
 
 def parse_args():
@@ -48,7 +48,9 @@ def get_high_low_tides(predictions):
         elif v < v_prev and v < v_next:
             lows.append({"time": t, "height": v})
 
-    return {"high_tides": highs, "low_tides": lows}
+    tides = {"high_tides": highs, "low_tides": lows}
+    print(tides)
+    return tides
 
 
 if __name__ == "__main__":
