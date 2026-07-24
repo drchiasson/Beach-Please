@@ -25,6 +25,6 @@ Date: <day of week> MM/DD/YY
 
 Non-Ideal day for the beach format:
 Date: MM/DD/YY
-* Day is not an ideal day to go to the beach 
-* <Reason why its not ideal>
+* Day is not an ideal day to go to the beach.
+* <Reason why its not ideal, include information about the temperature (specifically the high for the day and time the high occurs at), wind (the speed during the high temp) and tides (the height during the high temp of the day)>
 """

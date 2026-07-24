@@ -22,6 +22,8 @@ def get_forecasts(points_url=POINTS_URL) -> dict:
 
     forecast =  {"Forcast":[
         {
+            "startTime": str(period["startTime"]),
+            "endTime": str(period["endTime"]),
             "temperature": str(float(period["temperature"])),
             "windSpeed": str(parse_wind_speed(period["windSpeed"])),
             "windDirection": str(period["windDirection"]),

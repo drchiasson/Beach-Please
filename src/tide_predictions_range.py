@@ -34,6 +34,10 @@ def get_high_low_tides(predictions):
     predictions: list of {"t": "<datetime>", "v": "<height>"} dicts,
     as returned by get_tide_predictions.
     """
+
+    print()
+    print("Tidal formatted data")
+
     points = [(p["t"], float(p["v"])) for p in predictions]
 
     highs = []
@@ -50,6 +54,7 @@ def get_high_low_tides(predictions):
 
     tides = {"high_tides": highs, "low_tides": lows}
     print(tides)
+    print()
     return tides
 
 
