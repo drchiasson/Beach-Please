@@ -1,6 +1,11 @@
 import argparse
+import logging
 
 import requests
+
+from constants import REQUEST_TIMEOUT
+
+logger = logging.getLogger(__name__)
 
 STATION = "9414290"
 TIDES_URL = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter"
@@ -17,7 +22,7 @@ def get_tide_predictions(start_date, end_date):
         "units": "english",
         "format": "json",
     }
-    resp = requests.get(TIDES_URL, params=params)
+    resp = requests.get(TIDES_URL, params=params, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
     return get_high_low_tides(resp.json()["predictions"])
 
@@ -35,8 +40,7 @@ def get_high_low_tides(predictions):
     as returned by get_tide_predictions.
     """
 
-    print()
-    print("Tidal formatted data")
+    logger.debug("Tidal formatted data")
 
     points = [(p["t"], float(p["v"])) for p in predictions]
 
@@ -53,8 +57,7 @@ def get_high_low_tides(predictions):
             lows.append({"time": t, "height": v})
 
     tides = {"high_tides": highs, "low_tides": lows}
-    print(tides)
-    print()
+    logger.debug(tides)
     return tides
 
 

@@ -1,9 +1,14 @@
+import logging
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
 
 import cv2
 import requests
+
+from constants import REQUEST_TIMEOUT
+
+logger = logging.getLogger(__name__)
 
 BASE_URL = "https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/psw/GEOCOLOR/"
 FILENAME_PATTERN = re.compile(r"(\d{11})_GOES18-ABI-psw-GEOCOLOR-2400x2400\.jpg")
@@ -25,7 +30,7 @@ def parse_timestamp(ts):
 
 
 def get_available_images():
-    resp = requests.get(BASE_URL)
+    resp = requests.get(BASE_URL, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
 
     images = {}
@@ -52,7 +57,7 @@ def download_and_crop_images(urls):
     for url in urls:
         image_path = IMAGE_DIR / url.rsplit("/", 1)[-1]
 
-        resp = requests.get(url)
+        resp = requests.get(url, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()
         image_path.write_bytes(resp.content)
 
@@ -63,11 +68,12 @@ def download_and_crop_images(urls):
 def get_fog_data():
         images = get_available_images()
         urls = select_image_urls(images)
-        print(urls)
+        logger.debug(urls)
         download_and_crop_images(urls)
-        
+
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     images = get_available_images()
     urls = select_image_urls(images)
-    print(urls)
+    logger.debug(urls)
     download_and_crop_images(urls)
