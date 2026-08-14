@@ -11,6 +11,7 @@ from telegram_message_sender import send_bot_message
 from tide_predictions_range import get_tide_predictions
 from beach_please_prompt import prompt_string
 from fog_agent_prompt import fog_prompt
+from fog_downloader import get_fog_data
 
 beach_agent_prompt = prompt_string
 fog_agent_prompt = fog_prompt
@@ -111,8 +112,14 @@ def telegram_message(message) -> str:
 
     return "message sent"
 
+def fog_data(message) -> str:
+    """ 
+        Gathers the fog data for the current day
+    """
+    get_fog_data()
+    return "fog_data_ready"
 
-tools = [forecast_data, tidal_data, telegram_message]
+tools = [forecast_data, tidal_data, telegram_message, fog_data]
 model = ChatGoogleGenerativeAI(model="gemini-3.1-flash-lite").bind_tools(tools)
 fog_model = ChatGoogleGenerativeAI(model="gemini-3.1-flash-lite")
 
