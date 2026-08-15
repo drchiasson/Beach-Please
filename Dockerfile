@@ -1,6 +1,5 @@
 FROM python:3.14.6-slim-bookworm AS base
 
-ARG DEV=false
 ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH"
 
@@ -27,11 +26,7 @@ RUN pip install poetry==2.1.1
 
 # Install the app
 COPY pyproject.toml poetry.lock ./
-RUN if [ $DEV ]; then \
-      poetry install --with dev --no-root && rm -rf $POETRY_CACHE_DIR; \
-    else \
-      poetry install --without dev --no-root && rm -rf $POETRY_CACHE_DIR; \
-    fi
+RUN poetry install --no-root && rm -rf $POETRY_CACHE_DIR
 
 
 FROM base AS runtime
