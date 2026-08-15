@@ -2,4 +2,4 @@
 # Runs once daily at 07:00 server-local time. Edit the schedule here and redeploy to change it.
 PATH=/usr/local/bin:/usr/bin:/bin
 
-0 7 * * * /opt/beach-please/app/run.sh >> /opt/beach-please/app/run.log 2>&1
+0 10 * * * /opt/beach-please/app/run.sh >> /opt/beach-please/app/run.log 2>&1
