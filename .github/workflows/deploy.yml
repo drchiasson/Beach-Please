@@ -29,6 +29,9 @@ jobs:
 
   deploy:
     needs: build-check
+    # Only runs when manually triggered via the Actions tab "Run workflow"
+    # button - a push to main runs build-check but does not touch the server.
+    if: github.event_name == 'workflow_dispatch'
     # Runs on a self-hosted runner installed on the target server itself, so
     # the SSH steps below go over localhost - no port needs to be exposed
     # through the home router / to the internet.

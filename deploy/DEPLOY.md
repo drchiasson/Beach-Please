@@ -1,9 +1,12 @@
 # Deploying Beach Please
 
-GitHub Actions builds the image once on the runner as a sanity check (fails
-fast on a broken Dockerfile/dependency, nothing is pushed anywhere), then
-deploys over SSH using two single-purpose keys, each locked down with an
-`authorized_keys` forced command so it can do exactly one thing:
+Every push to `main` runs `build-check` (builds the image on the runner as a
+fast-failing sanity check; nothing is pushed anywhere or touches the server).
+The actual deploy only runs when you manually trigger it: repo → **Actions**
+→ **Deploy** → **Run workflow**. Pushing to `main` alone does not deploy.
+
+Deploying goes over SSH using two single-purpose keys, each locked down with
+an `authorized_keys` forced command so it can do exactly one thing:
 
 - **upload key** — can only open an SFTP session rooted at
   `/opt/beach-please/app` on the server. Cannot run shell commands.
@@ -108,8 +111,9 @@ Add these under the repo's Settings → Secrets and variables → Actions:
 
 ## Changing the schedule
 
-Edit `deploy/crontab.txt` and push to `main`. The next deploy uploads the new
-file and reinstalls it via the cron key — no server access required.
+Edit `deploy/crontab.txt`, push to `main`, then manually trigger **Run
+workflow** — the deploy uploads the new file and reinstalls it via the cron
+key. No server access required.
 
 ## What the deploy credentials cannot do
 

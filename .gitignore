@@ -2,3 +2,7 @@
 *.DS_Store
 satellite_image_bin/*.jpg
 __pycache__/
+beach-please-upload
+beach-please-upload.pub
+beach-please-cron
+beach-please-cron.pub
