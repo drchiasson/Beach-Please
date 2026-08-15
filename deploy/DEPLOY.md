@@ -55,12 +55,44 @@ uploads, or has access to that file.
    EOF
    ```
 
-5. Pin the server's host key so the workflow isn't vulnerable to a
-   machine-in-the-middle on first connect. From your local machine:
+5. If your server is only reachable on your local network (no public
+   IP/port-forwarding), GitHub's cloud runners can't reach it - a connection
+   from `deploy.yml` will just time out. Rather than exposing SSH to the
+   internet, install a **self-hosted GitHub Actions runner directly on the
+   server**, so the deploy job's SSH steps go over `localhost`:
+
+   - Repo → **Settings → Actions → Runners → New self-hosted runner**, pick
+     Linux/x64, and run the exact commands it shows you on the server, as
+     your normal sudo user (not `deploy`) - e.g.:
+     ```
+     mkdir ~/actions-runner && cd ~/actions-runner
+     curl -o actions-runner.tar.gz -L <url from the GitHub page>
+     tar xzf actions-runner.tar.gz
+     ./config.sh --url https://github.com/drchiasson/Beach-Please --token <token from the GitHub page>
+     ```
+   - Install it as a persistent service so it survives reboots/disconnects:
+     ```
+     sudo ./svc.sh install
+     sudo ./svc.sh start
+     ```
+   - `deploy.yml`'s `deploy` job is already set to `runs-on: self-hosted` to
+     use it (the `build-check` job stays on GitHub's cloud runners, since it
+     doesn't need to reach the server).
+
+   If your server *is* publicly reachable (a cloud VM, or you've deliberately
+   port-forwarded 22), you can skip this and use GitHub's regular
+   `ubuntu-latest` runners instead - just change `runs-on: self-hosted` back
+   to `runs-on: ubuntu-latest` for the `deploy` job.
+
+6. Pin the SSH host key so the workflow isn't vulnerable to a
+   machine-in-the-middle on first connect. Run this **on the server itself**
+   (since the runner connects over localhost):
    ```
-   ssh-keyscan -t ed25519 your.server.example.com
+   ssh-keyscan -t ed25519 localhost
    ```
    Save the full output line(s) — this goes in `DEPLOY_KNOWN_HOSTS` below.
+   (If you skipped step 5 and are connecting over the public internet
+   instead, run this from your local machine against the real hostname.)
 
 ## GitHub Actions secrets
 
@@ -68,9 +100,9 @@ Add these under the repo's Settings → Secrets and variables → Actions:
 
 | Secret               | Value                                                        |
 |-----------------------|--------------------------------------------------------------|
-| `DEPLOY_HOST`         | Server hostname/IP                                            |
+| `DEPLOY_HOST`         | `localhost` (self-hosted runner on the server) or the server's public hostname/IP |
 | `DEPLOY_USER`         | `deploy`                                                       |
-| `DEPLOY_KNOWN_HOSTS`  | Output of `ssh-keyscan` from step 5                            |
+| `DEPLOY_KNOWN_HOSTS`  | Output of `ssh-keyscan` from step 6                            |
 | `DEPLOY_UPLOAD_KEY`   | Private key contents of `beach-please-upload`                  |
 | `DEPLOY_CRON_KEY`     | Private key contents of `beach-please-cron`                    |
 

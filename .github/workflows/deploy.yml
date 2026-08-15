@@ -29,7 +29,10 @@ jobs:
 
   deploy:
     needs: build-check
-    runs-on: ubuntu-latest
+    # Runs on a self-hosted runner installed on the target server itself, so
+    # the SSH steps below go over localhost - no port needs to be exposed
+    # through the home router / to the internet.
+    runs-on: self-hosted
     env:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
