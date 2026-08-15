@@ -36,6 +36,8 @@ RUN if [ $DEV ]; then \
 
 FROM base AS runtime
 
+WORKDIR /app
+
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 
 COPY src ./src
