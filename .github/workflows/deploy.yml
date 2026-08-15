@@ -1,0 +1,81 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build-check:
+    # Builds the image on the GitHub runner as a fast-failing sanity check
+    # (bad Dockerfile/dependency changes get caught here, not on the server).
+    # Nothing is pushed anywhere - the image built here is discarded.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image (validation only)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-check
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      # This key can ONLY start an sftp session rooted at /opt/beach-please/app
+      # on the server (enforced by the authorized_keys forced command) - it
+      # cannot run arbitrary shell commands.
+      - name: Upload source via SFTP
+        env:
+          UPLOAD_KEY: ${{ secrets.DEPLOY_UPLOAD_KEY }}
+        run: |
+          umask 077
+          printf '%s\n' "$UPLOAD_KEY" > upload_key
+          chmod 600 upload_key
+          sftp -i upload_key -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" <<'BATCH'
+          put Dockerfile
+          put pyproject.toml
+          put poetry.lock
+          -rm -r src
+          put -r src src
+          put deploy/run.sh run.sh
+          put deploy/crontab.txt crontab.txt
+          chmod 755 run.sh
+          BATCH
+          rm -f upload_key
+
+      # This key can ONLY execute the fixed deploy-apply.sh forced command on
+      # the server (enforced by the authorized_keys forced command) - the
+      # command string sent here is ignored. It rebuilds the local image from
+      # the source just uploaded and reinstalls the crontab.
+      - name: Build image and install crontab on server
+        env:
+          CRON_KEY: ${{ secrets.DEPLOY_CRON_KEY }}
+        run: |
+          umask 077
+          printf '%s\n' "$CRON_KEY" > cron_key
+          chmod 600 cron_key
+          ssh -i cron_key -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" true
+          rm -f cron_key
