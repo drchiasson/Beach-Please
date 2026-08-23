@@ -2,6 +2,8 @@
 import logging
 import sys
 from typing import Annotated, Sequence, TypedDict, Dict
+from urllib.parse import urlparse
+import requests
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage, SystemMessage
 from langchain_core.tools import tool
 from langgraph.graph.message import add_messages
@@ -163,12 +165,43 @@ graph.add_edge("fog_agent", "agent")
 
 app = graph.compile()
 
+_SERVICE_NAMES = {
+    "api.weather.gov": "NOAA Weather (forecast)",
+    "api.tidesandcurrents.noaa.gov": "NOAA Tides",
+    "cdn.star.nesdis.noaa.gov": "NOAA Satellite (fog imagery)",
+    "api.telegram.org": "Telegram",
+}
+
+
+def _describe_request_error(exc: requests.exceptions.RequestException) -> str:
+    """Turn a requests exception into a human-readable summary naming the failing service."""
+    url = getattr(getattr(exc, "request", None), "url", None)
+    host = urlparse(url).hostname if url else None
+    service = _SERVICE_NAMES.get(host, host or "an external service")
+
+    if isinstance(exc, requests.exceptions.Timeout):
+        return f"{service} timed out"
+    if isinstance(exc, requests.exceptions.ConnectionError):
+        return f"could not connect to {service}"
+    if isinstance(exc, requests.exceptions.HTTPError):
+        status = exc.response.status_code if exc.response is not None else "unknown"
+        return f"{service} returned an error (HTTP {status})"
+    return f"a request to {service} failed ({exc.__class__.__name__})"
+
+
 def run_beach_agent():
     logger.info("==Beach Please Agent==")
     state = {"messages": []}
     try:
         for step_count, step in enumerate(app.stream(state, stream_mode="values"), start=1):
             logger.debug("Step: %s", step_count)
+    except requests.exceptions.RequestException as exc:
+        logger.exception("Beach agent run failed due to a request error")
+        try:
+            send_bot_message(f"Beach Please run failed - {_describe_request_error(exc)}. Check logs for details.")
+        except Exception:
+            logger.exception("Failed to send failure notification")
+        raise
     except Exception:
         logger.exception("Beach agent run failed")
         try:
