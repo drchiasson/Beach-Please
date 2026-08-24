@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Forced command for the cron-trigger deploy key. Ignores any client-supplied
-# command and always just: rebuilds the local image from the source the
-# upload key just placed, then (re)installs the crontab. Nothing here is
-# parameterized by the SSH client - the client cannot influence what runs.
+# Deploy logic, run by the fixed stub the cron key's forced command execs
+# (see bootstrap.sh). Uploaded to APP_DIR on every deploy (see deploy.yml),
+# so unlike the stub, this file's logic updates automatically - no server
+# access needed to change it. Rebuilds the local image from the source the
+# upload key just placed, then (re)installs the crontab.
 set -euo pipefail
 
 APP_DIR="/opt/beach-please/app"

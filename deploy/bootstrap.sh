@@ -8,7 +8,6 @@ DEPLOY_USER="deploy"
 DEPLOY_HOME="/opt/beach-please"
 APP_DIR="${DEPLOY_HOME}/app"
 BIN_DIR="${DEPLOY_HOME}/bin"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if ! id -u "$DEPLOY_USER" >/dev/null 2>&1; then
   useradd --create-home --home-dir "$DEPLOY_HOME" --shell /bin/bash "$DEPLOY_USER"
@@ -20,7 +19,20 @@ mkdir -p "$APP_DIR" "$BIN_DIR" "${DEPLOY_HOME}/.ssh"
 chown -R "${DEPLOY_USER}:${DEPLOY_USER}" "$DEPLOY_HOME"
 chmod 700 "${DEPLOY_HOME}/.ssh"
 
-install -o root -g root -m 755 "${SCRIPT_DIR}/deploy-apply.sh" "${BIN_DIR}/deploy-apply.sh"
+# Fixed forced-command entrypoint for the cron key. Deliberately never
+# changes and stays out of the upload key's reach (it's owned by root, and
+# lives outside APP_DIR which is all the upload key can write to) - it just
+# execs the real deploy-apply.sh from APP_DIR, which every deploy's sftp
+# upload keeps current (see deploy.yml). This indirection means deploy
+# logic changes ship automatically from here on; this stub is the only
+# thing that ever needs installing by hand, and only this once.
+cat > "${BIN_DIR}/deploy-apply.sh" << STUB
+#!/usr/bin/env bash
+set -euo pipefail
+exec "${APP_DIR}/deploy-apply.sh"
+STUB
+chown root:root "${BIN_DIR}/deploy-apply.sh"
+chmod 755 "${BIN_DIR}/deploy-apply.sh"
 
 touch "${DEPLOY_HOME}/.ssh/authorized_keys"
 chown "${DEPLOY_USER}:${DEPLOY_USER}" "${DEPLOY_HOME}/.ssh/authorized_keys"

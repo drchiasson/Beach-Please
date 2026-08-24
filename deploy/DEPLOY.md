@@ -10,10 +10,14 @@ an `authorized_keys` forced command so it can do exactly one thing:
 
 - **upload key** — can only open an SFTP session rooted at
   `/opt/beach-please/app` on the server. Cannot run shell commands.
-- **cron key** — can only execute `deploy/deploy-apply.sh` on the server,
-  which rebuilds the image locally (`docker build -t beach-please:local .`)
-  from the source the upload key just placed, then reinstalls the crontab.
-  Any command sent by the client is ignored.
+- **cron key** — can only execute a fixed stub script on the server (any
+  command sent by the client is ignored). That stub execs
+  `/opt/beach-please/app/deploy-apply.sh`, which the upload key keeps up to
+  date on every deploy - it rebuilds the image locally
+  (`docker build -t beach-please:local .`) from the source just uploaded,
+  then reinstalls the crontab. The stub itself never changes and isn't
+  reachable by the upload key; see "How the deploy logic updates itself"
+  below for why it's split this way.
 
 No image or source code ever leaves your server — there's no registry
 involved, so there's no visibility (public/private) question at all. The
@@ -32,8 +36,8 @@ uploads, or has access to that file.
    sudo ./bootstrap.sh
    ```
    This creates the `deploy` system user (home `/opt/beach-please`, added to
-   the `docker` group so it can build/run containers), installs
-   `deploy-apply.sh`, and prepares `~deploy/.ssh/authorized_keys`.
+   the `docker` group so it can build/run containers), installs the fixed
+   stub the cron key execs, and prepares `~deploy/.ssh/authorized_keys`.
 
 2. On your local machine, generate the two deploy keypairs:
    ```
@@ -119,15 +123,61 @@ key. No server access required.
 
 Both keys are scoped by `authorized_keys` forced commands, independent of
 whatever command the client sends. Even if a deploy secret leaked, it could
-only overwrite files under `/opt/beach-please/app` (upload key) or re-run
-`docker build` + `crontab crontab.txt` on whatever source is currently
-uploaded there (cron key) — no general shell, no access to `.env`, no ability
-to install arbitrary cron jobs without also compromising the upload key. Both
-keys log in as the same `deploy` OS user, which is a member of the `docker`
-group so it can build/run containers — that group membership (not either
-deploy key) is what actually gives Docker access. If you need Docker access
-isolated even from `deploy` itself, consider rootless Docker as a follow-up
-hardening step.
+only overwrite files under `/opt/beach-please/app` (upload key, which now
+includes `deploy-apply.sh` itself — see below) or run the fixed stub, which
+execs whatever `deploy-apply.sh` currently is (cron key) — no general shell,
+no access to `.env`, no ability to install arbitrary cron jobs without also
+compromising the upload key. The upload key alone can plant anything it
+wants under `app/`, but nothing runs it until the cron key triggers a
+deploy — same as before this file existed. Both keys log in as the same
+`deploy` OS user, which is a member of the `docker` group so it can
+build/run containers — that group membership (not either deploy key) is
+what actually gives Docker access. If you need Docker access isolated even
+from `deploy` itself, consider rootless Docker as a follow-up hardening
+step.
+
+## How the deploy logic updates itself
+
+`deploy-apply.sh` used to be installed once by `bootstrap.sh` and never
+touched again — the pipeline had no way to update it, since it lived outside
+`/opt/beach-please/app`, the only place the upload key can write to.
+Changing it meant copying the file onto the server by hand, every time.
+
+Now only a tiny stub lives outside `app/`, installed once by `bootstrap.sh`
+and never changed again:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+exec "/opt/beach-please/app/deploy-apply.sh"
+```
+
+The real logic — `deploy/deploy-apply.sh` in this repo — is uploaded to
+`app/deploy-apply.sh` on every deploy, the same way `run.sh` and
+`crontab.txt` already were. The cron key still only ever runs the fixed
+stub, and the stub still only ever execs one hardcoded path — but what's
+*at* that path now updates automatically. Editing `deploy/deploy-apply.sh`
+and redeploying is enough; no server access needed.
+
+**If your server was bootstrapped before this change**, it still has the
+old, full `deploy-apply.sh` installed as the forced command — the automated
+upload can't reach or replace it. This is the one remaining manual step, and
+the last one: install the new stub once, by hand:
+
+```bash
+sudo tee /opt/beach-please/bin/deploy-apply.sh > /dev/null <<'STUB'
+#!/usr/bin/env bash
+set -euo pipefail
+exec "/opt/beach-please/app/deploy-apply.sh"
+STUB
+sudo chown root:root /opt/beach-please/bin/deploy-apply.sh
+sudo chmod 755 /opt/beach-please/bin/deploy-apply.sh
+```
+
+After that, trigger a deploy as usual — it uploads the current
+`deploy-apply.sh` logic to `app/`, and the stub picks it up immediately.
+From then on, every future change to `deploy/deploy-apply.sh` ships on its
+own.
 
 ## How src/ gets replaced on each deploy
 

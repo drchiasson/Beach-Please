@@ -65,15 +65,17 @@ jobs:
           put poetry.lock
           put -r src src_incoming
           put deploy/run.sh run.sh
+          put deploy/deploy-apply.sh deploy-apply.sh
           put deploy/crontab.txt crontab.txt
           chmod 755 run.sh
+          chmod 755 deploy-apply.sh
           BATCH
           rm -f upload_key
 
-      # This key can ONLY execute the fixed deploy-apply.sh forced command on
-      # the server (enforced by the authorized_keys forced command) - the
-      # command string sent here is ignored. It rebuilds the local image from
-      # the source just uploaded and reinstalls the crontab.
+      # This key can ONLY execute a fixed forced command (enforced by
+      # authorized_keys) - the command string sent here is ignored. That
+      # forced command is a stub that just execs app/deploy-apply.sh, which
+      # the upload above just refreshed - see DEPLOY.md.
       - name: Build image and install crontab on server
         env:
           CRON_KEY: ${{ secrets.DEPLOY_CRON_KEY }}
