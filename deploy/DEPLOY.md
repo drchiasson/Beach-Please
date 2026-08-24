@@ -129,12 +129,29 @@ deploy key) is what actually gives Docker access. If you need Docker access
 isolated even from `deploy` itself, consider rootless Docker as a follow-up
 hardening step.
 
-## Known caveat
+## How src/ gets replaced on each deploy
 
-The upload step removes and re-uploads `src/` on each deploy so files
-deleted from the repo don't linger on the server (`-rm -r src` in the sftp
-batch). Recursive `rm` requires a reasonably recent OpenSSH on the server; if
-yours doesn't support it that one command is silently skipped (the batch
-continues) and old files may accumulate under `src/` — harmless since Python
-won't import unreferenced files, but worth an occasional manual cleanup if
-you rename/delete source files often.
+When the target directory already exists, sftp's `put -r local remote`
+uploads `local` as a subdirectory inside `remote`. So `put -r src src`,
+against a server that already has `src/` from a previous deploy, produces
+`src/src/*`. Docker's `COPY src ./src` never looks there, so the container
+keeps running whatever was in the top-level `src/` before — even though the
+deploy reports success.
+
+To avoid uploading onto a directory that might already exist, the upload
+always goes to `src_incoming/` instead of `src/`. `deploy-apply.sh`, running
+as a real shell command on the server, then does `rm -rf src && mv
+src_incoming src` before building.
+
+`src_incoming` itself needs to not already exist for the same reason, so
+`deploy-apply.sh` also guarantees it's gone by the time the script exits:
+
+```bash
+trap 'rm -rf "${APP_DIR}/src_incoming"' EXIT
+```
+
+This registers a cleanup command that bash runs when the script exits — at
+the end, or on any failure along the way — not at the line where it's
+written. On a normal deploy it's a no-op, since the `mv` above already
+removed `src_incoming`. It only matters if the script fails before reaching
+that `mv`.

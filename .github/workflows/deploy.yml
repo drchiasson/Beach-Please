@@ -63,8 +63,7 @@ jobs:
           put Dockerfile
           put pyproject.toml
           put poetry.lock
-          -rm -r src
-          put -r src src
+          put -r src src_incoming
           put deploy/run.sh run.sh
           put deploy/crontab.txt crontab.txt
           chmod 755 run.sh
