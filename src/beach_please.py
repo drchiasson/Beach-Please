@@ -4,6 +4,7 @@ import sys
 from typing import Annotated, Sequence, TypedDict, Dict
 from urllib.parse import urlparse
 import requests
+import urllib3.exceptions
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage, SystemMessage
 from langchain_core.tools import tool
 from langgraph.graph.message import add_messages
@@ -179,8 +180,16 @@ def _describe_request_error(exc: requests.exceptions.RequestException) -> str:
     host = urlparse(url).hostname if url else None
     service = _SERVICE_NAMES.get(host, host or "an external service")
 
-    if isinstance(exc, requests.exceptions.Timeout):
-        return f"{service} timed out"
+    # Our requests session retries transient failures (see constants.py). Once
+    # retries are exhausted, urllib3 wraps everything - including a repeated
+    # read timeout - as ConnectionError(MaxRetryError(reason=...)), so check
+    # the wrapped reason to keep reporting a timeout as a timeout.
+    retry_reason = getattr(exc.args[0], "reason", None) if exc.args else None
+
+    if isinstance(exc, requests.exceptions.Timeout) or isinstance(
+        retry_reason, urllib3.exceptions.TimeoutError
+    ):
+        return f"{service} timed out, even after retries"
     if isinstance(exc, requests.exceptions.ConnectionError):
         return f"could not connect to {service}"
     if isinstance(exc, requests.exceptions.HTTPError):

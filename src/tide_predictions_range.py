@@ -1,9 +1,7 @@
 import argparse
 import logging
 
-import requests
-
-from constants import REQUEST_TIMEOUT
+from constants import REQUEST_TIMEOUT, session
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +20,7 @@ def get_tide_predictions(start_date, end_date):
         "units": "english",
         "format": "json",
     }
-    resp = requests.get(TIDES_URL, params=params, timeout=REQUEST_TIMEOUT)
+    resp = session.get(TIDES_URL, params=params, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
     return get_high_low_tides(resp.json()["predictions"])
 

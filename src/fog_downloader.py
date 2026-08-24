@@ -4,9 +4,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import cv2
-import requests
 
-from constants import REQUEST_TIMEOUT
+from constants import REQUEST_TIMEOUT, session
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +29,7 @@ def parse_timestamp(ts):
 
 
 def get_available_images():
-    resp = requests.get(BASE_URL, timeout=REQUEST_TIMEOUT)
+    resp = session.get(BASE_URL, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
 
     images = {}
@@ -57,7 +56,7 @@ def download_and_crop_images(urls):
     for url in urls:
         image_path = IMAGE_DIR / url.rsplit("/", 1)[-1]
 
-        resp = requests.get(url, timeout=REQUEST_TIMEOUT)
+        resp = session.get(url, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()
         image_path.write_bytes(resp.content)
 

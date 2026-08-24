@@ -2,13 +2,12 @@ import logging
 import re
 from dataclasses import dataclass
 
-import requests
+from constants import REQUEST_TIMEOUT, session
 
 logger = logging.getLogger(__name__)
 
 POINTS_URL = "https://api.weather.gov/points/37.8017,-122.48"
 HEADERS = {"User-Agent": "BeachPlease-Weather"}
-REQUEST_TIMEOUT = 10
 
 def parse_wind_speed(wind_speed_str):
     speeds = [float(n) for n in re.findall(r"\d+(?:\.\d+)?", wind_speed_str)]
@@ -18,11 +17,11 @@ def parse_wind_speed(wind_speed_str):
 
 
 def get_forecasts(points_url=POINTS_URL) -> dict:
-    points_resp = requests.get(points_url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+    points_resp = session.get(points_url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
     points_resp.raise_for_status()
     forecast_url = points_resp.json()["properties"]["forecast"]
 
-    forecast_resp = requests.get(forecast_url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+    forecast_resp = session.get(forecast_url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
     forecast_resp.raise_for_status()
     periods = forecast_resp.json()["properties"]["periods"]
 
