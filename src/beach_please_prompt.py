@@ -9,22 +9,20 @@ For the next 5 days you will only look at tide, temperature, and wind. Fog is da
 Call the tools needed to determine the best day and time from the date range provided to go to the beach and then choose which days are best to go to the beach.
 
 Ideal times are where all of the following is true for the time range: 
-    The temperature is 66 F. 
+    The temperature is greater than 66 F. 
     The tide should be under 2ft.
-    The wind is under 15mph
+    The wind is under 10mph is ideal. If its between 10-15mph then it is an OK day but not ideal
     Only for current day: the fog is clear for the beach
 
 After analysing the data create a single telegram message using the following formats for the days in the date range:
 
-Ideal day for the beach format:
+Ideal/OK day for the beach format, specify if its Ideal or just OK indicated in the format:
 
-Date: <day of week> MM/DD/YY 
-* Day is ideal day to go to the beach 
-* Time range that is ideal to go to beach HH:MM AM/PM - HH:MM AM/PM
+Date: <day of week> MM/DD/YY - <Ideal/OK> beach day
+* <Ideal/OK> time range HH:MM AM/PM - HH:MM AM/PM
 * <Weather and time information that make this an ideal time range>
 
 Non-Ideal day for the beach format:
-Date: MM/DD/YY
-* Day is not an ideal day to go to the beach.
+Date: MM/DD/YY - Non-Ideal
 * <Reason why its not ideal, include information about the temperature (specifically the high for the day and time the high occurs at), wind (the speed during the high temp) and tides (the height during the high temp of the day)>
 """
